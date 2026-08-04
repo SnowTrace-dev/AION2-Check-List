@@ -2521,7 +2521,7 @@
     /* V1.3.0 feedback layout */
     .bottom-info-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, .9fr) minmax(0, .9fr) minmax(260px, .72fr);
       gap: 14px;
       align-items: start;
       margin-top: 18px;
@@ -2536,6 +2536,53 @@
     .bottom-info-grid .efficiency-section {
       margin-top: 0 !important;
     }
+    .bus-calculator-section {
+      margin-top: 0 !important;
+      border: 2px solid var(--line);
+      background: var(--card-bg);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .bus-calculator-form {
+      display: grid;
+      gap: 9px;
+    }
+    .bus-calculator-field {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .bus-calculator-field select,
+    .bus-calculator-field input {
+      width: 100%;
+      min-width: 0;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 8px 9px;
+      font-family: inherit;
+      font-weight: 900;
+    }
+    .bus-calculator-result {
+      display: grid;
+      gap: 7px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+    .bus-result-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .bus-result-row b { color: var(--text); text-align: right; }
+    .bus-result-row.total b { color: var(--gold2); }
     .efficiency-table-row {
       grid-template-columns: minmax(150px,1fr) 46px 72px 72px 72px 76px !important;
       padding-left: 8px !important;
@@ -2574,7 +2621,7 @@
       margin-top: 8px;
       box-sizing: border-box;
     }
-    @media (max-width: 900px) {
+    @media (max-width: 1180px) {
       .bottom-info-grid { grid-template-columns: 1fr; }
     }
 
@@ -2729,6 +2776,27 @@
             <div id="efficiencyTable" class="efficiency-table"></div>
           </div>
         </details>
+        <details class="bus-calculator-section" id="busCalculatorFold" open>
+          <summary class="fold-title">버스 효율 계산기</summary>
+          <div class="fold-body">
+            <div class="bus-calculator-form">
+              <label class="bus-calculator-field">던전
+                <select id="busDungeon"></select>
+              </label>
+              <label class="bus-calculator-field">판수
+                <input id="busRuns" type="text" inputmode="numeric" placeholder="예: 5" />
+              </label>
+              <label class="bus-calculator-field">총 버스비
+                <input id="busFee" type="text" inputmode="numeric" placeholder="예: 10,000,000" />
+              </label>
+            </div>
+            <div class="bus-calculator-result">
+              <div class="bus-result-row"><span>판당 기본 보상</span><b id="busBaseReward">-</b></div>
+              <div class="bus-result-row total"><span>버스비 제외 판당 순수익</span><b id="busNetPerRun">-</b></div>
+              <div class="bus-result-row"><span>10 오드당 순수익</span><b id="busEfficiency">-</b></div>
+            </div>
+          </div>
+        </details>
       </div>
       <div class="utility-row">
         <button id="backupButton" class="small-btn">데이터 백업</button>
@@ -2794,7 +2862,7 @@
     const TASKS = [
       "각성전", "지령서", "일일던전", "어비스 지령서", "어비스 회랑", "[원정]", "[초월]",
       "[시련] 바크론의 공중섬",
-      "[성역] 루드라", "[성역] 바고트", "[성역] 칼드릭스",
+      "[성역] 루드라", "[성역] 바고트", "[성역] 칼드릭스", "[성역] 칼드릭스 (보통)",
       "[산들바람] 오드 에너지", "[산들바람] 펫 영혼결정",
       "[산들바람] 일던 도전권", "[산들바람] 일던 즉완권",
       "[산들바람] 악몽 즉완권", "[물질변환] 오드 에너지"
@@ -2808,15 +2876,12 @@
 
     const DUNGEONS = {
       "[원정]": [
-        { name: "4티어 보통", reward: makeReward(600000, 600000, 80) },
-        { name: "4티어 어려움", reward: makeReward(1620000, 0, 80) },
         { name: "5티어 보통", reward: makeReward(1620000, 0, 80) },
         { name: "5티어 어려움", reward: makeReward(2010000, 0, 80) },
         { name: "6티어 보통", reward: makeReward(2010000, 0, 80) },
         { name: "6티어 어려움", reward: makeReward(3600000, 0, 120) }
       ],
       "[초월]": [
-        { name: "2티어 1단계", reward: makeReward(600000, 600000, 80) },
         { name: "3티어 1단계", reward: makeReward(1500000, 0, 80) },
         { name: "3티어 2단계", reward: makeReward(1710000, 0, 80) },
         { name: "3티어 3단계", reward: makeReward(2010000, 0, 80) },
@@ -2831,7 +2896,8 @@
     const SANCTUM_REWARDS = {
       "[성역] 루드라": makeReward(2000000, 2000000, 160),
       "[성역] 바고트": makeReward(8000000, 0, 160),
-      "[성역] 칼드릭스": makeReward(12000000, 0, 160)
+      "[성역] 칼드릭스": makeReward(12000000, 0, 160),
+      "[성역] 칼드릭스 (보통)": makeReward(10000000, 0, 160)
     };
 
     const AWAKENING_SCORE_TABLE = [
@@ -4075,6 +4141,66 @@
       });
     }
 
+    function getBusDungeonRows() {
+      return ["[원정]", "[초월]"].flatMap(category =>
+        (DUNGEONS[category] || []).map(item => ({
+          name: `${category} ${item.name}`,
+          reward: normalizeReward(item.reward)
+        }))
+      );
+    }
+
+    function calculateBusEfficiency() {
+      const select = document.getElementById("busDungeon");
+      const runsInput = document.getElementById("busRuns");
+      const feeInput = document.getElementById("busFee");
+      const baseBox = document.getElementById("busBaseReward");
+      const netBox = document.getElementById("busNetPerRun");
+      const efficiencyBox = document.getElementById("busEfficiency");
+      if (!select || !runsInput || !feeInput || !baseBox || !netBox || !efficiencyBox) return;
+
+      const rows = getBusDungeonRows();
+      const row = rows[Number(select.value || 0)];
+      if (!row) return;
+      const runs = Math.max(0, Math.floor(Number(String(runsInput.value || "0").replace(/,/g, "")) || 0));
+      const totalFee = Math.max(0, Number(String(feeInput.value || "0").replace(/,/g, "")) || 0);
+      const baseReward = rewardTotal(row.reward);
+      baseBox.textContent = `${comma(baseReward)} 키나`;
+
+      if (runs <= 0) {
+        netBox.textContent = "판수를 입력하세요";
+        efficiencyBox.textContent = "-";
+        return;
+      }
+
+      const netPerRun = Math.round((baseReward * runs - totalFee) / runs);
+      const efficiency = row.reward.aetherCost > 0
+        ? Math.round(netPerRun / row.reward.aetherCost * 10)
+        : 0;
+      netBox.textContent = `${comma(netPerRun)} 키나`;
+      efficiencyBox.textContent = `${comma(efficiency)} 키나`;
+    }
+
+    function setupBusCalculator() {
+      const select = document.getElementById("busDungeon");
+      const runsInput = document.getElementById("busRuns");
+      const feeInput = document.getElementById("busFee");
+      if (!select || !runsInput || !feeInput || select.dataset.ready === "1") return;
+      select.dataset.ready = "1";
+      getBusDungeonRows().forEach((row, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = `${row.name} · ${comma(row.reward.aetherCost)} 오드`;
+        select.appendChild(option);
+      });
+      [select, runsInput, feeInput].forEach(input => input.addEventListener("input", calculateBusEfficiency));
+      feeInput.addEventListener("blur", () => {
+        const value = Number(String(feeInput.value || "0").replace(/,/g, "")) || 0;
+        feeInput.value = value > 0 ? comma(value) : "";
+      });
+      calculateBusEfficiency();
+    }
+
     function renderProfitBox(el, rows) {
       const week = currentWeek();
       const counts = week.profitCount || {};
@@ -5044,6 +5170,7 @@
     enableCardListDrag();
     enableHorizontalDragScroll("growthList", "button, input, select, textarea, canvas");
     render();
+    setupBusCalculator();
     setInterval(render, 60 * 1000);
     window.addEventListener("resize", () => renderGrowth());
   </script>
