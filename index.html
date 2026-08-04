@@ -417,6 +417,25 @@
       background: var(--soft-bg);
     }
 
+    .custom-task-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 7px;
+      margin-bottom: 8px;
+    }
+
+    .custom-task-input {
+      width: 100%;
+      min-width: 0;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 8px 9px;
+      font-family: inherit;
+      font-weight: 900;
+    }
+
     .homework-list {
       display: flex;
       flex-direction: column;
@@ -874,11 +893,8 @@
       min-width: 0;
     }
 
-    .growth-history::-webkit-scrollbar { width: 8px; }
-    .growth-history::-webkit-scrollbar-thumb {
-      background: rgba(37, 99, 235, .35);
-      border-radius: 999px;
-    }
+    .growth-history { scrollbar-width: none; -ms-overflow-style: none; }
+    .growth-history::-webkit-scrollbar { display: none; }
 
     .growth-history-head {
       display: flex;
@@ -2632,7 +2648,6 @@
     <nav class="tab-remote" aria-label="키나로그 탭">
       <button class="tab-btn active" data-tab="checklist">체크리스트</button>
       <button class="tab-btn" data-tab="growth">성장</button>
-      <button class="tab-btn" data-tab="memo">메모</button>
     </nav>
     <section class="topbar">
       <img class="brand-logo" src="assets/Logo.png" alt="키나로그" />
@@ -2732,15 +2747,6 @@
       <div id="growthList" class="growth-list"></div>
     </section>
 
-    <section id="memoPage" class="tab-page memo-section">
-      <div class="section-head">
-        <div class="section-title">메모</div>
-        <div class="memo-toolbar">
-          <button id="addMemoButton" class="small-btn">+ 메모 추가</button>
-        </div>
-      </div>
-      <div id="memoGrid" class="memo-grid"></div>
-    </section>
   </main>
 
   <template id="characterTemplate">
@@ -2787,6 +2793,7 @@
     const STORAGE_KEY = "aion2_weekly_checklist_v2";
     const TASKS = [
       "각성전", "지령서", "일일던전", "어비스 지령서", "어비스 회랑", "[원정]", "[초월]",
+      "[시련] 바크론의 공중섬",
       "[성역] 루드라", "[성역] 바고트", "[성역] 칼드릭스",
       "[산들바람] 오드 에너지", "[산들바람] 펫 영혼결정",
       "[산들바람] 일던 도전권", "[산들바람] 일던 즉완권",
@@ -3630,7 +3637,6 @@
       renderHistory();
       renderTabs();
       renderGrowth();
-      renderMemos();
       maybePromptAbyssResult();
       save();
     }
@@ -3664,6 +3670,30 @@
       card.querySelector(".toggle-add-task").onclick = () => panel.classList.toggle("open");
 
       const taskGrid = card.querySelector(".task-grid");
+      const customTaskForm = document.createElement("div");
+      customTaskForm.className = "custom-task-form";
+      const customTaskInput = document.createElement("input");
+      customTaskInput.className = "custom-task-input";
+      customTaskInput.type = "text";
+      customTaskInput.maxLength = 40;
+      customTaskInput.placeholder = "직접 숙제 이름 입력";
+      const customTaskButton = document.createElement("button");
+      customTaskButton.className = "small-btn";
+      customTaskButton.textContent = "추가";
+      const submitCustomTask = () => {
+        const taskName = customTaskInput.value.trim();
+        if (!taskName) return;
+        addTask(character.id, taskName);
+      };
+      customTaskInput.addEventListener("keydown", event => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        submitCustomTask();
+      });
+      customTaskButton.onclick = submitCustomTask;
+      customTaskForm.appendChild(customTaskInput);
+      customTaskForm.appendChild(customTaskButton);
+      panel.insertBefore(customTaskForm, taskGrid);
       TASKS.forEach(taskName => {
         const button = document.createElement("button");
         button.className = "task-choice";
@@ -4347,7 +4377,8 @@
     }
 
     function renderTabs() {
-      const active = state.activeTab || "checklist";
+      const active = state.activeTab === "memo" ? "checklist" : (state.activeTab || "checklist");
+      if (state.activeTab !== active) state.activeTab = active;
       document.querySelectorAll(".tab-btn").forEach(button => {
         button.classList.toggle("active", button.dataset.tab === active);
       });
@@ -4661,6 +4692,7 @@
         const weeklyMount = card.querySelector(".stigma-weekly-mount");
         if (weeklyMount) weeklyMount.appendChild(createCharacterStigmaPanel(character, remaining));
         renderPowerHistoryRows(card.querySelector(".growth-history-rows"), character.powerHistory || []);
+        enableVerticalDragScrollElement(card.querySelector(".growth-history"));
         const list = card.querySelector(".stigma-list");
         (character.stigmas || []).forEach(stigma => list.appendChild(createStigmaRow(character, stigma)));
         enableVerticalDragScrollElement(list);
@@ -4695,8 +4727,8 @@
         level.value = clean;
         stigma.level = Math.max(0, Math.min(20, Number(clean || 0)));
         save();
-        renderGrowth();
       };
+      level.onblur = () => renderGrowth();
       const down = document.createElement("button");
       down.className = "small-btn";
       down.textContent = "−";
@@ -4986,8 +5018,6 @@
     document.querySelectorAll(".tab-btn").forEach(button => {
       button.onclick = () => setActiveTab(button.dataset.tab);
     });
-    document.getElementById("addMemoButton").onclick = addMemo;
-
     document.getElementById("addCharacterButton").onclick = addCharacter;
     document.getElementById("addExtraProfit").onclick = addExtraProfit;
     document.getElementById("addExpense").onclick = addExpense;
